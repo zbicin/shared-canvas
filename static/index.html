@@ -32,6 +32,7 @@
 
 <body>
     <header>
+        <button id="exportBtn">Export</button>
         <input type="color" id="color" value="#000000">
         <input type="number" id="size" min="1" max="10" step="1" value="3">
         <button id="undoBtn">Undo</button>
@@ -42,7 +43,8 @@
         const socket = io();
         const colorElement = document.getElementById('color');
         const sizeElement = document.getElementById('size');
-        paper.setup(document.getElementById('myCanvas'));
+        const canvasElement = document.getElementById('myCanvas');
+        paper.setup(canvasElement);
         let myPath;
         const tool = new paper.Tool();
         tool.onMouseDown = event => {
@@ -85,6 +87,17 @@
 
         socket.on('clear', () => {
             paper.project.clear();
+        });
+
+        const exportBtn = document.getElementById('exportBtn');
+        exportBtn.addEventListener('click', () => {
+            const downloadLink = document.createElement('a');
+            downloadLink.setAttribute('download', 'export.png');
+            canvasElement.toBlob((blob) => {
+                const url = URL.createObjectURL(blob);
+                downloadLink.setAttribute('href', url);
+                downloadLink.click();
+            });
         });
     </script>
 </body>
