@@ -12,8 +12,11 @@
         body {
             height: 100%;
             width: 100%;
+            max-height: 100vh;
+            max-width: 100vw;
             padding: 0;
             margin: 0;
+            overflow: scroll;
         }
 
         header {
@@ -21,11 +24,12 @@
             top: 0;
             left: 0;
             padding: 10px;
+            width: 100vw;
         }
 
         canvas[resize] {
-            width: 100%;
-            height: 100%;
+            width: 1920px;
+            height: 1080px;
         }
     </style>
     <link rel="icon"
@@ -34,11 +38,19 @@
 
 <body>
     <header>
-        <button id="exportBtn">💾 Export</button>
-        <input type="color" id="color" value="#000000">
-        <input type="number" id="size" min="1" max="10" step="1" value="3">
-        <button id="undoBtn">↩️ Undo</button>
-        <button id="clearBtn">🗑️ Clear</button>
+        <div>
+            <select id="tool">
+                <option value="draw">✏️ Draw</option>
+                <option value="move">👆 Move</option>
+            </select>
+            <input type="color" id="color" value="#000000">
+            <input type="number" id="size" min="1" max="10" step="1" value="3">
+        </div>
+        <div>
+            <button id="exportBtn">💾 Export</button>
+            <button id="undoBtn">↩️ Undo</button>
+            <button id="clearBtn">🗑️ Clear</button>
+        </div>
     </header>
     <canvas id="myCanvas" resize="true"></canvas>
     <script type="text/javascript">
@@ -46,20 +58,27 @@
         const colorElement = document.getElementById('color');
         const sizeElement = document.getElementById('size');
         const canvasElement = document.getElementById('myCanvas');
+        const toolElement = document.getElementById('tool');
+        toolElement.value = 'draw';
+
         paper.setup(canvasElement);
         let myPath;
-        const tool = new paper.Tool();
-        tool.onMouseDown = event => {
+        const dummyTool = new paper.Tool();
+
+        const drawingTool = new paper.Tool();
+        drawingTool.activate();
+        drawingTool.onMouseDown = event => {
             myPath = new paper.Path();
             myPath.strokeColor = colorElement.value;
             myPath.strokeWidth = sizeElement.valueAsNumber;
         };
 
-        tool.onMouseDrag = event => {
-            myPath?.add(event.point);
+        drawingTool.onMouseDrag = event => {
+            const adaptedPoint = new paper.Point(event.point.x + document.body.scrollLeft, event.point.y + document.body.scrollTop);
+            myPath?.add(adaptedPoint);
         };
 
-        tool.onMouseUp = event => {
+        drawingTool.onMouseUp = event => {
             myPath.simplify();
             socket.emit('drawpath', { color: colorElement.value, pathData: myPath.pathData, size: sizeElement.valueAsNumber });
         };
@@ -69,7 +88,6 @@
             incomingPath.strokeColor = e.color;
             incomingPath.strokeWidth = e.size;
         });
-
         const clearBtn = document.getElementById('clearBtn');
         clearBtn.addEventListener('click', () => {
             if (confirm('Do you really want to clear the canvas?')) {
@@ -100,6 +118,14 @@
                 downloadLink.setAttribute('href', url);
                 downloadLink.click();
             });
+        });
+
+        toolElement.addEventListener('change', e => {
+            if (e.target.value === 'draw') {
+                drawingTool.activate();
+            } else if (e.target.value === 'move') {
+                dummyTool.activate();
+            }
         });
     </script>
 </body>
